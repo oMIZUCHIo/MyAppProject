@@ -20,4 +20,9 @@ class Parameter {
     //选择的文件夹路径
     private String directoryPath;
 
+    //正确答案路径
+    private String trueAnswersPath;
+
+    //用户答案路径
+    private String myAnswersPath;
 }

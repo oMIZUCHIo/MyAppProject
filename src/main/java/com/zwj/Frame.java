@@ -13,6 +13,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.stage.DirectoryChooser;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
@@ -25,6 +26,12 @@ import java.io.File;
  */
 public class Frame extends Application {
 
+    private Parameter parameter = new Parameter();
+
+    private Integer page = 1;   //默认第一页
+
+    private Button backBtn = new Button("返回");
+
     private Label exerciseNumLabel = new Label("生成题目数：");
     private TextField exerciseNumField = new TextField();
 
@@ -34,20 +41,30 @@ public class Frame extends Application {
     private Button directoryBtn = new Button("选择目录");
     private Label directoryLabel = new Label();
 
+    private Button checkBtn = new Button("比对答案");
     private Button OKBtn = new Button("确定");
+
+    private Label myAnswerLabel = new Label("我的答案：");
+    private Label trueAnswerLabel = new Label("正确答案：");
+
+    private Button myAnswerBtn = new Button("选择文件");
+    private Button trueAnswerBtn = new Button("选择文件");
+
+    private Label myAnswerFilePathLabel = new Label();
+    private Label trueAnswerFilePathLabel = new Label();
 
     public static void main(String[] args) {
         launch(args);
     }
 
     @Override
-    public void start(final Stage primaryStage) throws Exception {
+    public void start(final Stage primaryStage){
 
         primaryStage.setTitle("MyApp");
         primaryStage.setWidth(500);
         primaryStage.setHeight(300);
 
-        GridPane grid = new GridPane();
+        final GridPane grid = new GridPane();
         grid.setAlignment(Pos.CENTER);
         grid.setHgap(30);
         grid.setVgap(30);
@@ -59,6 +76,7 @@ public class Frame extends Application {
         grid.add(scopeField,1,2);
         grid.add(directoryBtn,0,3);
         grid.add(directoryLabel,1,3);
+        grid.add(checkBtn,1,4);
         grid.add(OKBtn,3,4);
 
         Group root = new Group();
@@ -67,6 +85,65 @@ public class Frame extends Application {
         primaryStage.setScene(scene);
         primaryStage.show();
 
+        checkBtn.setOnAction(new EventHandler<ActionEvent>(){
+            @Override
+            public void handle(ActionEvent arg0) {
+
+                page = 2;
+
+                grid.getChildren().remove(exerciseNumLabel);
+                grid.getChildren().remove(exerciseNumField);
+                grid.getChildren().remove(scopeLabel);
+                grid.getChildren().remove(scopeField);
+                grid.getChildren().remove(checkBtn);
+                grid.getChildren().remove(OKBtn);
+
+                grid.add(myAnswerLabel,0,1);
+                grid.add(myAnswerBtn,1,1);
+                grid.add(myAnswerFilePathLabel,2,1);
+                grid.add(trueAnswerLabel,0,2);
+                grid.add(trueAnswerBtn,1,2);
+                grid.add(trueAnswerFilePathLabel,2,2);
+                grid.add(backBtn,1,4);
+                grid.add(OKBtn,2,4);
+
+                myAnswerBtn.setOnAction(new EventHandler<ActionEvent>(){
+                    @Override
+                    public void handle(ActionEvent arg0) {
+                        FileChooser fileChooser = new FileChooser();
+                        FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("files (*.txt)", "*.txt");
+                        fileChooser.getExtensionFilters().add(extFilter);
+                        File file = fileChooser.showOpenDialog(primaryStage);
+                        if(file != null){
+                            myAnswerFilePathLabel.setText(file.getAbsolutePath());
+                            parameter.setMyAnswersPath(file.getAbsolutePath());
+                        }
+                    }
+                });
+                trueAnswerBtn.setOnAction(new EventHandler<ActionEvent>(){
+                    @Override
+                    public void handle(ActionEvent arg0) {
+                        FileChooser fileChooser = new FileChooser();
+                        FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("files (*.txt)", "*.txt");
+                        fileChooser.getExtensionFilters().add(extFilter);
+                        File file = fileChooser.showOpenDialog(primaryStage);
+                        if(file != null){
+                            trueAnswerFilePathLabel.setText(file.getAbsolutePath());
+                            parameter.setTrueAnswersPath(file.getAbsolutePath());
+                        }
+                    }
+                });
+                backBtn.setOnAction(new EventHandler<ActionEvent>(){
+                    @Override
+                    public void handle(ActionEvent arg0) {
+                        primaryStage.close();
+                        Frame frame = new Frame();
+                        frame.start(primaryStage);
+                    }
+                });
+            }
+        });
+
         directoryBtn.setOnAction(new EventHandler<ActionEvent>(){
             @Override
             public void handle(ActionEvent arg0) {
@@ -74,9 +151,11 @@ public class Frame extends Application {
                 File file = directoryChooser.showDialog(primaryStage);
                 if(file != null){
                     directoryLabel.setText(file.getAbsolutePath());
+                    parameter.setDirectoryPath(file.getAbsolutePath());
                 }
             }
         });
+
 
         OKBtn.setOnAction(new EventHandler<ActionEvent>(){
             @Override
@@ -94,10 +173,30 @@ public class Frame extends Application {
                 if((null == exerciseNumStr || "".equals(exerciseNumStr))
                     || (null == scopeStr || "".equals(scopeStr))){
 
-                    result.setText("题目数、数值范围不能为空");
-                }else{
+                    if(page == 1){
+                        result.setText("题目数、数值范围不能为空");
+                    }else{
 
-                    Parameter parameter = new Parameter();
+                        if(parameter.getMyAnswersPath() == null){
+                            result.setText("我的答案文件不能为空");
+                        }else if(parameter.getTrueAnswersPath() == null){
+                            result.setText("正确答案文件不能为空");
+                        }else if(parameter.getDirectoryPath() == null){
+                            result.setText("成绩输出文件夹不能为空");
+                        }else{
+
+                            FileUtil fileUtil = new FileUtil();
+
+                            String resultStr = fileUtil.checkAnswersProcess(parameter);
+
+                            if(resultStr == null || "".equals(resultStr)){
+                                result.setText("操作成功");
+                            }else {
+                                result.setText(resultStr);
+                            }
+                        }
+                    }
+                }else{
                     try{
                         parameter.setExerciseNum(Integer.valueOf(exerciseNumStr));
                         parameter.setScopeLength(Integer.valueOf(scopeStr));
